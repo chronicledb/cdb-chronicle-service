@@ -5,25 +5,50 @@ import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxResponse;
 import io.github.grantchen2003.cdb.chronicle.grpc.ChronicleServiceGrpc;
 import io.grpc.stub.StreamObserver;
 
-public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceImplBase {
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
-    // TODO
+public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceImplBase {
+    private final ConcurrentHashMap<String, Long> cdbIdToSn = new ConcurrentHashMap<>();
+    private final ReentrantLock[] lockStripes;
+    private final int STRIPE_COUNT = 1024;
+
+    public ChronicleServiceImpl() {
+        lockStripes = new ReentrantLock[STRIPE_COUNT];
+        for (int i = 0; i < STRIPE_COUNT; i++) {
+            lockStripes[i] = new ReentrantLock();
+        }
+    }
+
     @Override
     public void appendTx(AppendTxRequest request, StreamObserver<AppendTxResponse> responseObserver) {
         final String cdbId = request.getCdbId();
-        final long seqNum = request.getSeqNum();
-        final String tx = request.getTx();
+        final long incomingSn = request.getSeqNum();
 
-        System.out.println(cdbId);
-        System.out.println(seqNum);
-        System.out.println(tx);
+        final AppendTxResponse.Builder responseBuilder = AppendTxResponse.newBuilder();
 
-        final AppendTxResponse response = AppendTxResponse.newBuilder()
-                .setSuccess(true)
-                .setCommittedSeqNum(seqNum)
-                .build();
+        final ReentrantLock lock = lockStripes[Math.abs(cdbId.hashCode() % STRIPE_COUNT)];
+        lock.lock();
 
-        responseObserver.onNext(response);
+        try {
+            long currentSn = cdbIdToSn.getOrDefault(cdbId, 0L);
+
+            if (incomingSn == currentSn + 1) {
+                cdbIdToSn.put(cdbId, incomingSn);
+
+                responseBuilder.setSuccess(true)
+                        .setCommittedSeqNum(incomingSn);
+
+            } else {
+                responseBuilder.setSuccess(false)
+                        .setCommittedSeqNum(-1)
+                        .setErrorMessage("Retryable error: Invalid sequence number. Current sequence number is " + currentSn);
+            }
+        } finally {
+            lock.unlock();
+        }
+
+        responseObserver.onNext(responseBuilder.build());
         responseObserver.onCompleted();
     }
 }
