@@ -7,7 +7,7 @@ import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) throws IOException, InterruptedException {
-        int port = 9090;
+        final int port = 9090;
 
         final Server server = ServerBuilder.forPort(port)
                 .addService(new ChronicleServiceImpl())

@@ -31,7 +31,7 @@ public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceI
         lock.lock();
 
         try {
-            long currentSn = cdbIdToSn.getOrDefault(cdbId, 0L);
+            final long currentSn = cdbIdToSn.getOrDefault(cdbId, 0L);
 
             if (incomingSn == currentSn + 1) {
                 cdbIdToSn.put(cdbId, incomingSn);
