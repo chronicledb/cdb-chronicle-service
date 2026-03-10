@@ -156,16 +156,16 @@ class ChronicleServiceImplTest {
         // 1. Simulate a Kafka Timeout/Failure
         logProducer.setShouldFail(true);
 
-        AppendTxRequest failReq = AppendTxRequest.newBuilder()
+        final AppendTxRequest failReq = AppendTxRequest.newBuilder()
                 .setCdbId(cdbId)
                 .setSeqNum(1)
                 .setTx("data-1")
                 .build();
 
-        AppendTxResponseStub failStub = new AppendTxResponseStub(new CountDownLatch(1));
+        final AppendTxResponseStub failStub = new AppendTxResponseStub(new CountDownLatch(1));
         service.appendTx(failReq, failStub);
 
-        AppendTxResponse failResponse = failStub.getResponse();
+        final AppendTxResponse failResponse = failStub.getResponse();
         Assertions.assertFalse(failResponse.getSuccess(), "Should fail when producer fails");
         Assertions.assertEquals("Persistence failure", failResponse.getErrorMessage());
         Assertions.assertEquals(0L, failResponse.getCommittedSeqNum(), "Committed SN should still be 0");
@@ -173,13 +173,13 @@ class ChronicleServiceImplTest {
         // 2. Fix Kafka and try the SAME sequence number again
         logProducer.setShouldFail(false);
 
-        AppendTxRequest successReq = AppendTxRequest.newBuilder()
+        final AppendTxRequest successReq = AppendTxRequest.newBuilder()
                 .setCdbId(cdbId)
                 .setSeqNum(1)
                 .setTx("data-1-retry")
                 .build();
 
-        AppendTxResponseStub successStub = new AppendTxResponseStub(new CountDownLatch(1));
+        final AppendTxResponseStub successStub = new AppendTxResponseStub(new CountDownLatch(1));
         service.appendTx(successReq, successStub);
 
         AppendTxResponse successResponse = successStub.getResponse();
