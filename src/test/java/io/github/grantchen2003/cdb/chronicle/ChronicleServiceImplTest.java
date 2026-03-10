@@ -19,10 +19,12 @@ class ChronicleServiceImplTest {
     private static final int NUM_EXECUTOR_THREADS = 50;
     private ChronicleServiceImpl service;
     private ExecutorService executor;
+    private ChronicleLogProducerStub logProducer;
 
     @BeforeEach
     void setUp() {
-        service = new ChronicleServiceImpl();
+        logProducer = new ChronicleLogProducerStub();
+        service = new ChronicleServiceImpl(logProducer);
         executor = Executors.newFixedThreadPool(NUM_EXECUTOR_THREADS);
     }
 
@@ -146,6 +148,44 @@ class ChronicleServiceImplTest {
         Assertions.assertTrue(resp2.getSuccess(),"cdb2 should succeed independently of cdb1");
         Assertions.assertEquals(1L, resp2.getCommittedSeqNum(),"CommittedSeqNum for cdb2 should match the requested SN");
         Assertions.assertTrue(resp2.getErrorMessage().isEmpty(),"Error message for cdb2 should be empty on success, but was: " + resp2.getErrorMessage());
+    }
+
+    @Test
+    void testAppendTx_PersistenceFailureDoesNotIncrementSequence() {
+        final String cdbId = "test-cdb";
+
+        // 1. Simulate a Kafka Timeout/Failure
+        logProducer.setShouldFail(true);
+
+        AppendTxRequest failReq = AppendTxRequest.newBuilder()
+                .setCdbId(cdbId)
+                .setSeqNum(1)
+                .setTx("data-1")
+                .build();
+
+        AppendTxResponseStub failStub = new AppendTxResponseStub(new CountDownLatch(1));
+        service.appendTx(failReq, failStub);
+
+        AppendTxResponse failResponse = failStub.getResponse();
+        Assertions.assertFalse(failResponse.getSuccess(), "Should fail when producer fails");
+        Assertions.assertEquals("Persistence failure", failResponse.getErrorMessage());
+        Assertions.assertEquals(0L, failResponse.getCommittedSeqNum(), "Committed SN should still be 0");
+
+        // 2. Fix Kafka and try the SAME sequence number again
+        logProducer.setShouldFail(false);
+
+        AppendTxRequest successReq = AppendTxRequest.newBuilder()
+                .setCdbId(cdbId)
+                .setSeqNum(1)
+                .setTx("data-1-retry")
+                .build();
+
+        AppendTxResponseStub successStub = new AppendTxResponseStub(new CountDownLatch(1));
+        service.appendTx(successReq, successStub);
+
+        AppendTxResponse successResponse = successStub.getResponse();
+        Assertions.assertTrue(successResponse.getSuccess(), "Should succeed now that Kafka is up");
+        Assertions.assertEquals(1L, successResponse.getCommittedSeqNum(), "SN 1 should now be committed");
     }
 
     /**

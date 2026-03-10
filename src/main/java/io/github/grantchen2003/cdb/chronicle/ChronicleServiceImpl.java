@@ -6,14 +6,18 @@ import io.github.grantchen2003.cdb.chronicle.grpc.ChronicleServiceGrpc;
 import io.grpc.stub.StreamObserver;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceImplBase {
+    private final ChronicleLogProducer chronicleLogProducer;
     private final ConcurrentHashMap<String, Long> cdbIdToSn = new ConcurrentHashMap<>();
     private final ReentrantLock[] lockStripes;
     private final int STRIPE_COUNT = 1024;
 
-    public ChronicleServiceImpl() {
+    public ChronicleServiceImpl(ChronicleLogProducer chronicleLogProducer) {
+        this.chronicleLogProducer = chronicleLogProducer;
         lockStripes = new ReentrantLock[STRIPE_COUNT];
         for (int i = 0; i < STRIPE_COUNT; i++) {
             lockStripes[i] = new ReentrantLock();
@@ -24,6 +28,7 @@ public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceI
     public void appendTx(AppendTxRequest request, StreamObserver<AppendTxResponse> responseObserver) {
         final String cdbId = request.getCdbId();
         final long incomingSn = request.getSeqNum();
+        final String tx = request.getTx();
 
         final AppendTxResponse.Builder responseBuilder = AppendTxResponse.newBuilder();
 
@@ -34,11 +39,16 @@ public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceI
             final long currentSn = cdbIdToSn.getOrDefault(cdbId, 0L);
 
             if (incomingSn == currentSn + 1) {
-                cdbIdToSn.put(cdbId, incomingSn);
-
-                responseBuilder.setSuccess(true)
-                        .setCommittedSeqNum(incomingSn);
-
+                try {
+                    chronicleLogProducer.sendSync(cdbId, incomingSn, tx);
+                    cdbIdToSn.put(cdbId, incomingSn);
+                    responseBuilder.setSuccess(true)
+                            .setCommittedSeqNum(incomingSn);
+                } catch (ExecutionException | InterruptedException | TimeoutException e) {
+                    responseBuilder.setSuccess(false)
+                            .setCommittedSeqNum(currentSn)
+                            .setErrorMessage("Persistence failure");
+                }
             } else {
                 responseBuilder.setSuccess(false)
                         .setCommittedSeqNum(currentSn)
