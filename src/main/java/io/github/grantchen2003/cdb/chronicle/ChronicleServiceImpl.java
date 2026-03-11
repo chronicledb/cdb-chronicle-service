@@ -11,12 +11,13 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceImplBase {
+    private final ConcurrentHashMap<String, Long> cdbIdToSn;
     private final ChronicleLogProducer chronicleLogProducer;
-    private final ConcurrentHashMap<String, Long> cdbIdToSn = new ConcurrentHashMap<>();
     private final ReentrantLock[] lockStripes;
     private final int STRIPE_COUNT = 1024;
 
-    public ChronicleServiceImpl(ChronicleLogProducer chronicleLogProducer) {
+    public ChronicleServiceImpl(ConcurrentHashMap<String, Long> cdbIdToSn, ChronicleLogProducer chronicleLogProducer) {
+        this.cdbIdToSn = cdbIdToSn;
         this.chronicleLogProducer = chronicleLogProducer;
         lockStripes = new ReentrantLock[STRIPE_COUNT];
         for (int i = 0; i < STRIPE_COUNT; i++) {

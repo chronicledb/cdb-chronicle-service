@@ -5,10 +5,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ChronicleLogProducerStub extends ChronicleLogProducer {
     private final AtomicBoolean shouldFail = new AtomicBoolean(false);
-    private static final String dummyAddress = "localhost:9092";
 
-    public ChronicleLogProducerStub() {
-        super(dummyAddress);
+    public ChronicleLogProducerStub(String bootstrapServers) {
+        super(bootstrapServers);
     }
 
     public void setShouldFail(boolean fail) {

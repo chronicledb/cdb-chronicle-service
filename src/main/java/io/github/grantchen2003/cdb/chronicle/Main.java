@@ -4,15 +4,18 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
         final int port = 9090;
+        final String kafkaBootstrapServers = "localhost:9092";
 
-        final ChronicleLogProducer logProducer = new ChronicleLogProducer("localhost:9092");
+        final ConcurrentHashMap<String, Long> cdbIdToSn = ChronicleSnBootstrapper.loadCdbIdSeqNums(kafkaBootstrapServers);
+        final ChronicleLogProducer logProducer = new ChronicleLogProducer(kafkaBootstrapServers);
 
         final Server server = ServerBuilder.forPort(port)
-                .addService(new ChronicleServiceImpl(logProducer))
+                .addService(new ChronicleServiceImpl(cdbIdToSn, logProducer))
                 .build();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
