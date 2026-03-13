@@ -12,7 +12,7 @@ public class Main {
         final String kafkaBootstrapServers = "localhost:9092";
 
         final Map<String, Long> cdbIdToSn = ChronicleSnBootstrapper.loadCdbIdSeqNums(kafkaBootstrapServers);
-        final ChronicleLogProducer logProducer = new ChronicleLogProducer(kafkaBootstrapServers);
+        final ChronicleLogProducer logProducer = new KafkaChronicleLogProducer(kafkaBootstrapServers);
 
         final Server server = ServerBuilder.forPort(port)
                 .addService(new ChronicleServiceImpl(cdbIdToSn, logProducer))

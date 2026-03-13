@@ -25,7 +25,7 @@ class ChronicleServiceImplTest {
     @BeforeEach
     void setUp() {
         final Map<String, Long> cdbIdToSn = ChronicleSnBootstrapper.loadCdbIdSeqNums(dummyBootstrapServers);
-        logProducer = new ChronicleLogProducerStub(dummyBootstrapServers);
+        logProducer = new ChronicleLogProducerStub();
         service = new ChronicleServiceImpl(cdbIdToSn, logProducer);
         executor = Executors.newFixedThreadPool(NUM_EXECUTOR_THREADS);
     }
