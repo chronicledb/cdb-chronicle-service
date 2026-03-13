@@ -33,7 +33,7 @@ public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceI
 
         final AppendTxResponse.Builder responseBuilder = AppendTxResponse.newBuilder();
 
-        final ReentrantLock lock = lockStripes[Math.abs(cdbId.hashCode() % STRIPE_COUNT)];
+        final ReentrantLock lock = lockStripes[Math.floorMod(cdbId.hashCode(), STRIPE_COUNT)];
         lock.lock();
 
         try {
