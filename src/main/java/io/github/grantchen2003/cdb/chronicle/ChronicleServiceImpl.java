@@ -5,18 +5,18 @@ import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxResponse;
 import io.github.grantchen2003.cdb.chronicle.grpc.ChronicleServiceGrpc;
 import io.grpc.stub.StreamObserver;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceImplBase {
-    private final ConcurrentHashMap<String, Long> cdbIdToSn;
+    private final Map<String, Long> cdbIdToSn;
     private final ChronicleLogProducer chronicleLogProducer;
     private final ReentrantLock[] lockStripes;
     private final int STRIPE_COUNT = 1024;
 
-    public ChronicleServiceImpl(ConcurrentHashMap<String, Long> cdbIdToSn, ChronicleLogProducer chronicleLogProducer) {
+    public ChronicleServiceImpl(Map<String, Long> cdbIdToSn, ChronicleLogProducer chronicleLogProducer) {
         this.cdbIdToSn = cdbIdToSn;
         this.chronicleLogProducer = chronicleLogProducer;
         lockStripes = new ReentrantLock[STRIPE_COUNT];

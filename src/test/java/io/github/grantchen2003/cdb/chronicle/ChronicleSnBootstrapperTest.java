@@ -12,7 +12,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,8 +54,7 @@ class ChronicleSnBootstrapperTest {
                     .thenReturn(ConsumerRecords.empty());
         })) {
             // Execute the original method
-            final ConcurrentHashMap<String, Long> result =
-                    ChronicleSnBootstrapper.loadCdbIdSeqNums("localhost:9092");
+            final Map<String, Long> result = ChronicleSnBootstrapper.loadCdbIdSeqNums("localhost:9092");
 
             // Verify the results match our seeded mock data
             assertEquals(2, result.size(), "Should have found 2 distinct cdb_ids");

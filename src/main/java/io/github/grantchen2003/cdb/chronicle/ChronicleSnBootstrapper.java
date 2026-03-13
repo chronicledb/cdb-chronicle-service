@@ -10,17 +10,16 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class ChronicleSnBootstrapper {
-    public static ConcurrentHashMap<String, Long> loadCdbIdSeqNums(String bootstrapServers) {
-        final ConcurrentHashMap<String, Long> cdbIdToSn = new ConcurrentHashMap<>();
-
+    public static Map<String, Long> loadCdbIdSeqNums(String bootstrapServers) {
+        final Map<String, Long> cdbIdToSn = new HashMap<>();
         final Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
