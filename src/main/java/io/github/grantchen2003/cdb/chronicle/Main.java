@@ -11,7 +11,8 @@ public class Main {
         final int port = 9090;
         final String kafkaBootstrapServers = "localhost:9092";
 
-        final Map<String, Long> cdbIdToSn = ChronicleSnBootstrapper.loadCdbIdSeqNums(kafkaBootstrapServers);
+        final ChronicleSnBootstrapper bootstrapper = new ChronicleSnBootstrapper(kafkaBootstrapServers);
+        final Map<String, Long> cdbIdToSn = bootstrapper.loadCdbIdSeqNums();
         final ChronicleLogProducer logProducer = new KafkaChronicleLogProducer(kafkaBootstrapServers);
 
         final Server server = ServerBuilder.forPort(port)

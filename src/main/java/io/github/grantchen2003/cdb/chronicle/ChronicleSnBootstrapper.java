@@ -20,7 +20,13 @@ import java.util.Set;
 public class ChronicleSnBootstrapper {
     private static final long DEFAULT_BOOTSTRAP_TIMEOUT_MS = 30_000;
 
-    public static Map<String, Long> loadCdbIdSeqNums(String bootstrapServers) {
+    private final String bootstrapServers;
+
+    public ChronicleSnBootstrapper(String bootstrapServers) {
+        this.bootstrapServers = bootstrapServers;
+    }
+
+    public Map<String, Long> loadCdbIdSeqNums() {
         final Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
@@ -32,7 +38,7 @@ public class ChronicleSnBootstrapper {
         }
     }
 
-    static Map<String, Long> loadCdbIdSeqNums(KafkaConsumerAdapter consumer, long timeoutMs) {
+    Map<String, Long> loadCdbIdSeqNums(KafkaConsumerAdapter consumer, long timeoutMs) {
         final Map<String, Long> cdbIdToSn = new HashMap<>();
 
         final Map<String, List<PartitionInfo>> topicToPartitions = consumer.listTopics();

@@ -15,6 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChronicleSnBootstrapperTest {
+    private static final String STUB_BOOTSTRAP_SERVERS = "stub:0000";
+    private final ChronicleSnBootstrapper bootstrapper = new ChronicleSnBootstrapper(STUB_BOOTSTRAP_SERVERS);
 
     @Test
     void testLoadCdbIdSeqNums_successfullyRecoversTwoPartitions() {
@@ -43,7 +45,7 @@ class ChronicleSnBootstrapperTest {
                 )
         );
 
-        final Map<String, Long> result = ChronicleSnBootstrapper.loadCdbIdSeqNums(stub, 5_000);
+        final Map<String, Long> result = bootstrapper.loadCdbIdSeqNums(stub, 5_000);
 
         assertEquals(2, result.size(), "Should have found 2 distinct cdb_ids");
         assertEquals(11L, result.get(cdbId1), "Should recover 11 for cdb1");
@@ -65,7 +67,7 @@ class ChronicleSnBootstrapperTest {
         );
 
         final RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                ChronicleSnBootstrapper.loadCdbIdSeqNums(stub, 100)
+                bootstrapper.loadCdbIdSeqNums(stub, 100)
         );
 
         assertTrue(ex.getMessage().contains("Bootstrap timed out"));
