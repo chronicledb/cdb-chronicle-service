@@ -156,7 +156,6 @@ class ChronicleServiceImplTest {
     void testAppendTx_PersistenceFailureDoesNotIncrementSequence() {
         final String cdbId = "test-cdb";
 
-        // 1. Simulate a Kafka Timeout/Failure
         logProducer.setShouldFail(true);
 
         final AppendTxRequest failReq = AppendTxRequest.newBuilder()
@@ -173,7 +172,6 @@ class ChronicleServiceImplTest {
         Assertions.assertEquals("Persistence failure", failResponse.getErrorMessage());
         Assertions.assertEquals(0L, failResponse.getCommittedSeqNum(), "Committed SN should still be 0");
 
-        // 2. Fix Kafka and try the SAME sequence number again
         logProducer.setShouldFail(false);
 
         final AppendTxRequest successReq = AppendTxRequest.newBuilder()
