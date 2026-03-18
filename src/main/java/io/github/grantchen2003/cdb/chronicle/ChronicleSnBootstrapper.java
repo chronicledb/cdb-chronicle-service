@@ -26,7 +26,7 @@ public class ChronicleSnBootstrapper {
         this.bootstrapServers = bootstrapServers;
     }
 
-    public Map<String, Long> loadCdbIdSeqNums() {
+    public Map<String, Long> loadChronicleIdSeqNums() {
         final Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
@@ -34,12 +34,12 @@ public class ChronicleSnBootstrapper {
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 
         try (final KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
-            return loadCdbIdSeqNums(new KafkaConsumerAdapterImpl(consumer), DEFAULT_BOOTSTRAP_TIMEOUT_MS);
+            return loadChronicleIdSeqNums(new KafkaConsumerAdapterImpl(consumer), DEFAULT_BOOTSTRAP_TIMEOUT_MS);
         }
     }
 
-    Map<String, Long> loadCdbIdSeqNums(KafkaConsumerAdapter consumer, long timeoutMs) {
-        final Map<String, Long> cdbIdToSn = new HashMap<>();
+    Map<String, Long> loadChronicleIdSeqNums(KafkaConsumerAdapter consumer, long timeoutMs) {
+        final Map<String, Long> chronicleIdToSn = new HashMap<>();
 
         final Map<String, List<PartitionInfo>> topicToPartitions = consumer.listTopics();
 
@@ -81,15 +81,15 @@ public class ChronicleSnBootstrapper {
 
             final ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
             for (final ConsumerRecord<String, String> record : records) {
-                final String cdbId = record.topic();
+                final String chronicleId = record.topic();
                 final long seqNum = Long.parseLong(record.key());
 
-                cdbIdToSn.merge(cdbId, seqNum, Math::max);
+                chronicleIdToSn.merge(chronicleId, seqNum, Math::max);
 
                 seenPartitions.add(new TopicPartition(record.topic(), record.partition()));
             }
         }
 
-        return cdbIdToSn;
+        return chronicleIdToSn;
     }
 }

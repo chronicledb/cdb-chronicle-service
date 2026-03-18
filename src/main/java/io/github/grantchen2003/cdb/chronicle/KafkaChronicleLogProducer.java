@@ -26,8 +26,8 @@ public class KafkaChronicleLogProducer implements ChronicleLogProducer {
     }
 
     @Override
-    public void sendSync(String cdbId, long seqNum, String tx) throws ExecutionException, InterruptedException, TimeoutException {
-        final ProducerRecord<String, String> record = new ProducerRecord<>(cdbId, String.valueOf(seqNum), tx);
+    public void sendSync(String chronicleId, long seqNum, String tx) throws ExecutionException, InterruptedException, TimeoutException {
+        final ProducerRecord<String, String> record = new ProducerRecord<>(chronicleId, String.valueOf(seqNum), tx);
         try {
             producer.send(record).get(5, TimeUnit.SECONDS);
         } catch (InterruptedException e) {

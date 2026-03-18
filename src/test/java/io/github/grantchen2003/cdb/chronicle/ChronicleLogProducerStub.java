@@ -11,7 +11,7 @@ public class ChronicleLogProducerStub implements ChronicleLogProducer {
     }
 
     @Override
-    public void sendSync(String cdbId, long seqNum, String tx) throws TimeoutException {
+    public void sendSync(String chronicleId, long seqNum, String tx) throws TimeoutException {
         if (shouldFail.get()) {
             throw new TimeoutException("Simulated Kafka Timeout");
         }

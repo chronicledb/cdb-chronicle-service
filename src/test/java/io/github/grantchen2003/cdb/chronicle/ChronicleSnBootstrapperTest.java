@@ -19,22 +19,22 @@ class ChronicleSnBootstrapperTest {
     private final ChronicleSnBootstrapper bootstrapper = new ChronicleSnBootstrapper(STUB_BOOTSTRAP_SERVERS);
 
     @Test
-    void testLoadCdbIdSeqNums_successfullyRecoversTwoPartitions() {
-        final String cdbId1 = "cdb1";
-        final String cdbId2 = "cdb2";
-        final TopicPartition tp1 = new TopicPartition(cdbId1, 0);
-        final TopicPartition tp2 = new TopicPartition(cdbId2, 0);
+    void testLoadChronicleIdSeqNums_successfullyRecoversTwoPartitions() {
+        final String chronicleId1 = "chronicle1";
+        final String chronicleId2 = "chronicle2";
+        final TopicPartition tp1 = new TopicPartition(chronicleId1, 0);
+        final TopicPartition tp2 = new TopicPartition(chronicleId2, 0);
 
         final Map<String, List<PartitionInfo>> metadata = new HashMap<>();
-        metadata.put(cdbId1, List.of(new PartitionInfo(cdbId1, 0, null, null, null)));
-        metadata.put(cdbId2, List.of(new PartitionInfo(cdbId2, 0, null, null, null)));
+        metadata.put(chronicleId1, List.of(new PartitionInfo(chronicleId1, 0, null, null, null)));
+        metadata.put(chronicleId2, List.of(new PartitionInfo(chronicleId2, 0, null, null, null)));
 
         final Map<TopicPartition, Long> endOffsets = new HashMap<>();
         endOffsets.put(tp1, 12L);
         endOffsets.put(tp2, 6L);
 
-        final ConsumerRecord<String, String> rec1 = new ConsumerRecord<>(cdbId1, 0, 11L, "11", "v2");
-        final ConsumerRecord<String, String> rec2 = new ConsumerRecord<>(cdbId2, 0, 5L, "5", "v3");
+        final ConsumerRecord<String, String> rec1 = new ConsumerRecord<>(chronicleId1, 0, 11L, "11", "v2");
+        final ConsumerRecord<String, String> rec2 = new ConsumerRecord<>(chronicleId2, 0, 5L, "5", "v3");
 
         final KafkaConsumerStub stub = new KafkaConsumerStub(
                 metadata,
@@ -45,20 +45,20 @@ class ChronicleSnBootstrapperTest {
                 )
         );
 
-        final Map<String, Long> result = bootstrapper.loadCdbIdSeqNums(stub, 5_000);
+        final Map<String, Long> result = bootstrapper.loadChronicleIdSeqNums(stub, 5_000);
 
-        assertEquals(2, result.size(), "Should have found 2 distinct cdb_ids");
-        assertEquals(11L, result.get(cdbId1), "Should recover 11 for cdb1");
-        assertEquals(5L, result.get(cdbId2), "Should recover 5 for cdb2");
+        assertEquals(2, result.size(), "Should have found 2 distinct chronicle_ids");
+        assertEquals(11L, result.get(chronicleId1), "Should recover 11 for chronicle1");
+        assertEquals(5L, result.get(chronicleId2), "Should recover 5 for chronicle2");
     }
 
     @Test
-    void testLoadCdbIdSeqNums_throwsWhenBootstrapTimesOut() {
-        final String cdbId1 = "cdb1";
-        final TopicPartition tp1 = new TopicPartition(cdbId1, 0);
+    void testLoadChronicleIdSeqNums_throwsWhenBootstrapTimesOut() {
+        final String chronicleId1 = "chronicle1";
+        final TopicPartition tp1 = new TopicPartition(chronicleId1, 0);
 
         final Map<String, List<PartitionInfo>> metadata = new HashMap<>();
-        metadata.put(cdbId1, List.of(new PartitionInfo(cdbId1, 0, null, null, null)));
+        metadata.put(chronicleId1, List.of(new PartitionInfo(chronicleId1, 0, null, null, null)));
 
         final KafkaConsumerStub stub = new KafkaConsumerStub(
                 metadata,
@@ -67,7 +67,7 @@ class ChronicleSnBootstrapperTest {
         );
 
         final RuntimeException ex = assertThrows(RuntimeException.class, () ->
-                bootstrapper.loadCdbIdSeqNums(stub, 100)
+                bootstrapper.loadChronicleIdSeqNums(stub, 100)
         );
 
         assertTrue(ex.getMessage().contains("Bootstrap timed out"));

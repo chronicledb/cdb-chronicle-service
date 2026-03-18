@@ -10,7 +10,7 @@ service ChronicleService {
 }
 
 message AppendTxRequest {
-  string cdb_id = 1;
+  string chronicle_id = 1;
   int64 seq_num = 2;
   string tx = 3;
 }

@@ -25,9 +25,9 @@ class ChronicleServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        final Map<String, Long> cdbIdToSn = new HashMap<>();
+        final Map<String, Long> chronicleIdToSn = new HashMap<>();
         logProducer = new ChronicleLogProducerStub();
-        service = new ChronicleServiceImpl(cdbIdToSn, logProducer);
+        service = new ChronicleServiceImpl(chronicleIdToSn, logProducer);
         executor = Executors.newFixedThreadPool(NUM_EXECUTOR_THREADS);
     }
 
@@ -37,15 +37,15 @@ class ChronicleServiceImplTest {
     }
 
     @Test
-    void testAppendTx_ConcurrentRequestsToSameCdbOnlyOneSucceeds() throws InterruptedException {
+    void testAppendTx_ConcurrentRequestsToSameChronicleOnlyOneSucceeds() throws InterruptedException {
         final int numConcurrentRequests = NUM_EXECUTOR_THREADS;
 
         for (int i = 0; i < 100; i++) {
-            final String cdbId = "cdb_" + i;
+            final String chronicleId = "chronicle_" + i;
             final long targetSn = 1L;
 
             final AppendTxRequest request = AppendTxRequest.newBuilder()
-                    .setCdbId(cdbId)
+                    .setChronicleId(chronicleId)
                     .setSeqNum(targetSn)
                     .build();
 
@@ -82,7 +82,7 @@ class ChronicleServiceImplTest {
                     .filter(s -> !s.isSuccess())
                     .toList();
 
-            Assertions.assertEquals(1, successStubs.size(), "Exactly one request should succeed for " + cdbId);
+            Assertions.assertEquals(1, successStubs.size(), "Exactly one request should succeed for " + chronicleId);
             final AppendTxResponse success = successStubs.getFirst().getResponse();
             Assertions.assertEquals(targetSn, success.getCommittedSeqNum(), "CommittedSeqNum should match targetSn");
 
@@ -94,17 +94,17 @@ class ChronicleServiceImplTest {
     }
 
     @Test
-    void testAppendTx_ConcurrentRequestsToTwoDifferentCdbBothSucceed() throws InterruptedException {
-        final String cdb1 = "cdb1";
-        final String cdb2 = "cdb2";
+    void testAppendTx_ConcurrentRequestsToTwoDifferentChroniclesBothSucceed() throws InterruptedException {
+        final String chronicle1 = "chronicle1";
+        final String chronicle2 = "chronicle2";
 
         final AppendTxRequest req1 = AppendTxRequest.newBuilder()
-                .setCdbId(cdb1)
+                .setChronicleId(chronicle1)
                 .setSeqNum(1)
                 .build();
 
         final AppendTxRequest req2 = AppendTxRequest.newBuilder()
-                .setCdbId(cdb2)
+                .setChronicleId(chronicle2)
                 .setSeqNum(1)
                 .build();
 
@@ -134,21 +134,21 @@ class ChronicleServiceImplTest {
             Assertions.fail("Different ID test timed out");
         }
 
-        Assertions.assertTrue(stub1.isSuccess(), "cdb1 should succeed independently of cdb2");
-        Assertions.assertEquals(1L, stub1.getResponse().getCommittedSeqNum(), "CommittedSeqNum for cdb1 should match the requested SN");
+        Assertions.assertTrue(stub1.isSuccess(), "chronicle1 should succeed independently of chronicle2");
+        Assertions.assertEquals(1L, stub1.getResponse().getCommittedSeqNum(), "CommittedSeqNum for chronicle1 should match the requested SN");
 
-        Assertions.assertTrue(stub2.isSuccess(), "cdb2 should succeed independently of cdb1");
-        Assertions.assertEquals(1L, stub2.getResponse().getCommittedSeqNum(), "CommittedSeqNum for cdb2 should match the requested SN");
+        Assertions.assertTrue(stub2.isSuccess(), "chronicle2 should succeed independently of chronicle1");
+        Assertions.assertEquals(1L, stub2.getResponse().getCommittedSeqNum(), "CommittedSeqNum for chronicle2 should match the requested SN");
     }
 
     @Test
     void testAppendTx_PersistenceFailureDoesNotIncrementSequence() {
-        final String cdbId = "test-cdb";
+        final String chronicleId = "test-chronicle";
 
         logProducer.setShouldFail(true);
 
         final AppendTxRequest failReq = AppendTxRequest.newBuilder()
-                .setCdbId(cdbId)
+                .setChronicleId(chronicleId)
                 .setSeqNum(1)
                 .setTx("data-1")
                 .build();
@@ -162,7 +162,7 @@ class ChronicleServiceImplTest {
         logProducer.setShouldFail(false);
 
         final AppendTxRequest successReq = AppendTxRequest.newBuilder()
-                .setCdbId(cdbId)
+                .setChronicleId(chronicleId)
                 .setSeqNum(1)
                 .setTx("data-1-retry")
                 .build();

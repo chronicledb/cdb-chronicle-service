@@ -12,11 +12,11 @@ public class Main {
         final String kafkaBootstrapServers = EnvConfig.get("KAFKA_BOOTSTRAP_SERVERS");
 
         final ChronicleSnBootstrapper bootstrapper = new ChronicleSnBootstrapper(kafkaBootstrapServers);
-        final Map<String, Long> cdbIdToSn = bootstrapper.loadCdbIdSeqNums();
+        final Map<String, Long> chronicleIdToSn = bootstrapper.loadChronicleIdSeqNums();
         final ChronicleLogProducer logProducer = new KafkaChronicleLogProducer(kafkaBootstrapServers);
 
         final Server server = ServerBuilder.forPort(port)
-                .addService(new ChronicleServiceImpl(cdbIdToSn, logProducer))
+                .addService(new ChronicleServiceImpl(chronicleIdToSn, logProducer))
                 .build();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
