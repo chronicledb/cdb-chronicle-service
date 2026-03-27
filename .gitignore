@@ -37,3 +37,14 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Terraform State
+# Contains metadata about your infrastructure and potentially secrets
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+
+# Terraform Plugins & Data
+# These are machine-specific and bulky
+.terraform/
+.terraform.lock.hcl

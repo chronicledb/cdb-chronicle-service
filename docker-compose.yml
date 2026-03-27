@@ -1,0 +1,10 @@
+services:
+  cdb-chronicle-service:
+    image: ${ECR_IMAGE_URI}
+    container_name: cdb-chronicle-service
+    restart: unless-stopped
+    environment:
+      CHRONICLE_SERVICE_PORT: ${CHRONICLE_SERVICE_PORT}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+    ports:
+      - "${CHRONICLE_SERVICE_PORT}:${CHRONICLE_SERVICE_PORT}"

@@ -14,9 +14,9 @@ On startup, the service recovers the last committed sequence number for every ch
 
 ## Prerequisites
 
-- Java 21+
-- Maven
-- A running Kafka broker
+- [Terraform](https://developer.hashicorp.com/terraform/install)
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) configured with credentials
+- [Docker](https://docs.docker.com/get-docker/)
 
 ## Configuration
 
@@ -27,7 +27,33 @@ The service is configured via environment variables:
 | `CHRONICLE_SERVICE_PORT` | Port the gRPC server listens on |
 | `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap servers (e.g. `localhost:9092`) |
 
-## Running
+## Deploy
+
+Create a `terraform.tfvars` file:
+
+```hcl
+region                                = "us-east-1"
+chronicle_service_port                = 50051
+chronicle_log_kafka_bootstrap_servers = "<cdb_chronicle_log_kafka_bootstrap_server>"
+```
+
+The Kafka bootstrap server value comes from the output of the `cdb-chronicle-log` Terraform deployment.
+
+Then:
+
+```bash
+terraform init
+terraform apply -auto-approve
+```
+
+Terraform will:
+1. Create an ECR repository
+2. Build the Docker image locally and push it to ECR
+3. Create a security group that allows gRPC (on `chronicle_service_port`) from within the VPC only
+4. Launch an Ubuntu EC2 instance in the shared VPC
+5. Install Docker on the instance, pull the image from ECR, and start the service
+
+## Running Locally
 
 ```bash
 export CHRONICLE_SERVICE_PORT=9090
@@ -35,6 +61,12 @@ export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 
 mvn package
 java -jar target/cdb-chronicle-service.jar
+```
+
+## Teardown
+
+```bash
+terraform destroy -auto-approve
 ```
 
 ## API
