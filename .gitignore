@@ -48,3 +48,4 @@ build/
 # These are machine-specific and bulky
 .terraform/
 .terraform.lock.hcl
+terraform.tfvars

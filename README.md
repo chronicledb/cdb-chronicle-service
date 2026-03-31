@@ -6,10 +6,6 @@ A gRPC service that acts as a write-ahead log gateway, enforcing strict per-chro
 
 `cdb-chronicle-service` sits between clients and a Kafka log. Clients submit transactions with a sequence number, and the service guarantees that transactions are committed in strict order — a transaction is only accepted if its sequence number is exactly one greater than the last committed sequence number for that chronicle.
 
-```
-Client → gRPC → cdb-chronicle-service → Kafka
-```
-
 On startup, the service recovers the last committed sequence number for every chronicle directly from Kafka, so no external state store is required.
 
 ## Prerequisites
@@ -25,19 +21,18 @@ The service is configured via environment variables:
 | Variable | Description |
 |---|---|
 | `CHRONICLE_SERVICE_PORT` | Port the gRPC server listens on |
-| `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap servers (e.g. `localhost:9092`) |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka bootstrap servers (e.g. `12.345.678.910:9092`) |
 
 ## Deploy
 
 Create a `terraform.tfvars` file:
 
 ```hcl
-region                                = "us-east-1"
-chronicle_service_port                = 50051
-chronicle_log_kafka_bootstrap_servers = "<cdb_chronicle_log_kafka_bootstrap_server>"
+region                  = "us-east-1"
+ami                     = "ami-0ec10929233384c7f"  # Ubuntu 24.04 LTS, us-east-1
+instance_type           = "t3.small"
+chronicle_service_port  = 50051
 ```
-
-The Kafka bootstrap server value comes from the output of the `cdb-chronicle-log` Terraform deployment.
 
 Then:
 

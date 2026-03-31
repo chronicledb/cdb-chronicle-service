@@ -11,14 +11,19 @@ variable "region" {
   type        = string
 }
 
+variable "ami" {
+  description = "AMI for the EC2 instance"
+  type        = string
+}
+
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+}
+
 variable "chronicle_service_port" {
   description = "cdb chronicle service port"
   type        = number
-}
-
-variable "chronicle_log_kafka_bootstrap_servers" {
-  description = "cdb chronicle log kafka bootstrap servers"
-  type        = string
 }
 
 # ---------------------------------------------------------------------------
@@ -33,6 +38,16 @@ data "terraform_remote_state" "shared_infra" {
   config = {
     bucket         = "cdb-tf-state-${data.aws_caller_identity.current.account_id}"
     key            = "shared-infra/terraform.tfstate"
+    region         = var.region
+  }
+}
+
+data "terraform_remote_state" "chronicle_log" {
+  backend = "s3"
+
+  config = {
+    bucket         = "cdb-tf-state-${data.aws_caller_identity.current.account_id}"
+    key            = "chronicle-log/terraform.tfstate"
     region         = var.region
   }
 }
@@ -116,8 +131,8 @@ locals {
 }
 
 resource "aws_instance" "cdb_chronicle_service" {
-  ami                         = "ami-0ec10929233384c7f" # Ubuntu 24.04 LTS, us-east-1
-  instance_type               = "t3.small"
+  ami                         = var.ami
+  instance_type               = var.instance_type
   subnet_id                   = data.terraform_remote_state.shared_infra.outputs.cdb_public_subnet_id
   vpc_security_group_ids      = [aws_security_group.cdb_chronicle_service_sg.id]
   associate_public_ip_address = true
@@ -147,7 +162,7 @@ resource "aws_instance" "cdb_chronicle_service" {
 
     # Set environment variables
     export ECR_IMAGE_URI="${local.ecr_image_uri}"
-    export KAFKA_BOOTSTRAP_SERVERS="${var.chronicle_log_kafka_bootstrap_servers}"
+    export KAFKA_BOOTSTRAP_SERVERS="${data.terraform_remote_state.chronicle_log.outputs.cdb_chronicle_log_kafka_bootstrap_server}"
     export CHRONICLE_SERVICE_PORT="${var.chronicle_service_port}"
 
     # Login to ECR and pull image
