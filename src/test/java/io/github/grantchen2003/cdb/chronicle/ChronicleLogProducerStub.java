@@ -1,6 +1,6 @@
 package io.github.grantchen2003.cdb.chronicle;
 
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ChronicleLogProducerStub implements ChronicleLogProducer {
@@ -11,10 +11,11 @@ public class ChronicleLogProducerStub implements ChronicleLogProducer {
     }
 
     @Override
-    public void sendSync(String chronicleId, long seqNum, String tx) throws TimeoutException {
+    public CompletableFuture<Void> sendAsync(String chronicleId, long seqNum, String tx) {
         if (shouldFail.get()) {
-            throw new TimeoutException("Simulated Kafka Timeout");
+            return CompletableFuture.failedFuture(new RuntimeException("Simulated Kafka failure"));
         }
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override

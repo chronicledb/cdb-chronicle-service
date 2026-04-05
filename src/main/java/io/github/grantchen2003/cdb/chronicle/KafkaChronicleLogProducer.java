@@ -7,9 +7,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.time.Duration;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CompletableFuture;
 
 public class KafkaChronicleLogProducer implements ChronicleLogProducer {
     private final KafkaProducer<String, String> producer;
@@ -26,14 +24,21 @@ public class KafkaChronicleLogProducer implements ChronicleLogProducer {
     }
 
     @Override
-    public void sendSync(String chronicleId, long seqNum, String tx) throws ExecutionException, InterruptedException, TimeoutException {
-        final ProducerRecord<String, String> record = new ProducerRecord<>(chronicleId, String.valueOf(seqNum), tx);
-        try {
-            producer.send(record).get(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw e;
-        }
+    public CompletableFuture<Void> sendAsync(String chronicleId, long seqNum, String tx) {
+        final ProducerRecord<String, String> record =
+                new ProducerRecord<>(chronicleId, String.valueOf(seqNum), tx);
+
+        final CompletableFuture<Void> result = new CompletableFuture<>();
+
+        producer.send(record, (metadata, exception) -> {
+            if (exception != null) {
+                result.completeExceptionally(exception);
+            } else {
+                result.complete(null);
+            }
+        });
+
+        return result;
     }
     
     @Override

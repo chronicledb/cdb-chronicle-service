@@ -7,12 +7,14 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceImplBase {
     private static final int STRIPE_COUNT = 1024;
+
+    private final ConcurrentHashMap<String, CompletableFuture<Void>> chronicleIdToInFlightWrite = new ConcurrentHashMap<>();
     private final Map<String, Long> chronicleIdToSn;
     private final ChronicleLogProducer chronicleLogProducer;
     private final ReentrantLock[] lockStripes;
@@ -33,31 +35,55 @@ public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceI
         final String tx = request.getTx();
 
         final ReentrantLock lock = lockStripes[Math.floorMod(chronicleId.hashCode(), STRIPE_COUNT)];
+
+        final CompletableFuture<Void> sendFuture;
         lock.lock();
-
         try {
-            final long currentSn = chronicleIdToSn.getOrDefault(chronicleId, 0L);
-
-            if (incomingSn == currentSn + 1) {
-                try {
-                    chronicleLogProducer.sendSync(chronicleId, incomingSn, tx);
-                    chronicleIdToSn.put(chronicleId, incomingSn);
-                    responseObserver.onNext(AppendTxResponse.newBuilder()
-                            .setCommittedSeqNum(incomingSn)
-                            .build());
-                    responseObserver.onCompleted();
-                } catch (ExecutionException | InterruptedException | TimeoutException e) {
-                    responseObserver.onError(Status.INTERNAL
-                            .withDescription("Persistence failure")
-                            .asRuntimeException());
-                }
-            } else {
+            if (chronicleIdToInFlightWrite.containsKey(chronicleId)) {
                 responseObserver.onError(Status.ABORTED
-                        .withDescription("Sequence number mismatch; expected " + (currentSn + 1) + ", got " + incomingSn)
+                        .withDescription("Previous write still in-flight, retry")
                         .asRuntimeException());
+                return;
             }
+
+            final long currentSn = chronicleIdToSn.getOrDefault(chronicleId, 0L);
+            if (incomingSn != currentSn + 1) {
+                responseObserver.onError(Status.ABORTED
+                        .withDescription("Sequence number mismatch; expected "
+                                + (currentSn + 1) + ", got " + incomingSn)
+                        .asRuntimeException());
+                return;
+            }
+
+            // register in-flight *before* releasing the lock
+            sendFuture = chronicleLogProducer.sendAsync(chronicleId, incomingSn, tx);
+            chronicleIdToInFlightWrite.put(chronicleId, sendFuture);
         } finally {
             lock.unlock();
         }
+
+        sendFuture.whenComplete((ignored, ex) -> {
+            lock.lock();
+            try {
+                chronicleIdToInFlightWrite.remove(chronicleId);
+                if (ex == null) {
+                    // only advance seqNum on confirmed write
+                    chronicleIdToSn.put(chronicleId, incomingSn);
+                }
+            } finally {
+                lock.unlock();
+            }
+
+            if (ex != null) {
+                responseObserver.onError(Status.INTERNAL
+                        .withDescription("Persistence failure")
+                        .asRuntimeException());
+            } else {
+                responseObserver.onNext(AppendTxResponse.newBuilder()
+                        .setCommittedSeqNum(incomingSn)
+                        .build());
+                responseObserver.onCompleted();
+            }
+        });
     }
 }
