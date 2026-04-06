@@ -1,4 +1,4 @@
-package io.github.grantchen2003.cdb.chronicle;
+package io.github.grantchen2003.cdb.chronicle.bootstrap;
 
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.PartitionInfo;
@@ -15,5 +15,4 @@ public interface KafkaConsumerAdapter {
     Map<TopicPartition, Long> endOffsets(Collection<TopicPartition> partitions);
     void seek(TopicPartition partition, long offset);
     ConsumerRecords<String, String> poll(Duration timeout);
-    void close();
 }

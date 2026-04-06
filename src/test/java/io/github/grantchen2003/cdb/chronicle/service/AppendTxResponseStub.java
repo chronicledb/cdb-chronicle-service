@@ -1,4 +1,4 @@
-package io.github.grantchen2003.cdb.chronicle;
+package io.github.grantchen2003.cdb.chronicle.service;
 
 import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxResponse;
 import io.grpc.StatusRuntimeException;
@@ -22,8 +22,8 @@ public class AppendTxResponseStub implements StreamObserver<AppendTxResponse> {
 
     @Override
     public void onError(Throwable t) {
-        if (t instanceof StatusRuntimeException) {
-            this.error = (StatusRuntimeException) t;
+        if (t instanceof StatusRuntimeException sre) {
+            this.error = sre;
         }
         latch.countDown();
     }

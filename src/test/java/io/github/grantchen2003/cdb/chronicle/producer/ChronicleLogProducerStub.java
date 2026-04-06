@@ -1,4 +1,4 @@
-package io.github.grantchen2003.cdb.chronicle;
+package io.github.grantchen2003.cdb.chronicle.producer;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -19,6 +19,5 @@ public class ChronicleLogProducerStub implements ChronicleLogProducer {
     }
 
     @Override
-    public void close() {
-    }
+    public void close() {}
 }

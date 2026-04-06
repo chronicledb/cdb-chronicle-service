@@ -1,4 +1,4 @@
-package io.github.grantchen2003.cdb.chronicle;
+package io.github.grantchen2003.cdb.chronicle.producer;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -40,7 +40,7 @@ public class KafkaChronicleLogProducer implements ChronicleLogProducer {
 
         return result;
     }
-    
+
     @Override
     public void close() {
         producer.close(Duration.ofSeconds(30));

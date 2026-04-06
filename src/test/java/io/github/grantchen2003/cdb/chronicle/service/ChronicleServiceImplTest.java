@@ -1,5 +1,6 @@
-package io.github.grantchen2003.cdb.chronicle;
+package io.github.grantchen2003.cdb.chronicle.service;
 
+import io.github.grantchen2003.cdb.chronicle.producer.ChronicleLogProducerStub;
 import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxRequest;
 import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxResponse;
 import io.grpc.Status;

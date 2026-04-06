@@ -1,4 +1,4 @@
-package io.github.grantchen2003.cdb.chronicle;
+package io.github.grantchen2003.cdb.chronicle.producer;
 
 import java.util.concurrent.CompletableFuture;
 
