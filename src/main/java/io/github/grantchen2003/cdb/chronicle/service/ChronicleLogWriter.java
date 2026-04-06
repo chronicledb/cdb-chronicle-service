@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 public class ChronicleLogWriter {
-    private static final int STRIPE_COUNT = 1024;
+    private static final int STRIPE_COUNT = 1 << 14;
 
     private final ChronicleLogProducer logProducer;
     private final Set<String> inFlightWrites = new HashSet<>();
