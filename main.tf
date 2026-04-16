@@ -221,6 +221,10 @@ output "cdb_chronicle_service_private_ip" {
   value = aws_instance.cdb_chronicle_service.private_ip
 }
 
+output "cdb_chronicle_service_port" {
+  value = var.chronicle_service_port
+}
+
 output "ecr_repository_url" {
   value = aws_ecr_repository.cdb_chronicle_service.repository_url
 }
