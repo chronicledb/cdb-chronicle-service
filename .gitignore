@@ -49,3 +49,4 @@ build/
 .terraform/
 .terraform.lock.hcl
 terraform.tfvars
+backend.hcl
