@@ -61,7 +61,11 @@ public class ChronicleLogWriter {
                 lock.lock();
                 try {
                     inFlightWrites.remove(chronicleId);
-                    if (ex == null) seqNums.put(chronicleId, incomingSn);
+                    if (ex == null) {
+                        seqNums.put(chronicleId, incomingSn);
+                    } else {
+                        ex.printStackTrace();
+                    }
                 } finally {
                     lock.unlock();
                 }
