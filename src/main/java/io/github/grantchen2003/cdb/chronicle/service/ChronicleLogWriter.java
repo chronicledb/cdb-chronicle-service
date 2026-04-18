@@ -54,8 +54,8 @@ public class ChronicleLogWriter {
                 return;
             }
 
-            final CompletableFuture<Void> sendFuture = logProducer.sendAsync(chronicleId, incomingSn, tx);
             inFlightWrites.add(chronicleId);
+            final CompletableFuture<Void> sendFuture = logProducer.sendAsync(chronicleId, incomingSn, tx);
 
             sendFuture.whenComplete((ignored, ex) -> {
                 lock.lock();
