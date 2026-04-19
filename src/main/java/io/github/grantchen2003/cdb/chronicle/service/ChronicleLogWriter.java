@@ -5,7 +5,6 @@ import io.github.grantchen2003.cdb.chronicle.producer.ChronicleLogProducer;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
@@ -29,35 +28,32 @@ public class ChronicleLogWriter {
     public sealed interface WriteResult
             permits WriteResult.Success, WriteResult.SendFailure, WriteResult.WriteInProgress, WriteResult.SequenceMismatch {
 
-        record Success() implements WriteResult {}
+        long lastCommittedSeqNum();
 
-        record SendFailure() implements WriteResult {}
-
-        record WriteInProgress() implements WriteResult {}
-
-        record SequenceMismatch(long expected, long received) implements WriteResult {}
+        record Success(long lastCommittedSeqNum) implements WriteResult {}
+        record SendFailure(long lastCommittedSeqNum) implements WriteResult {}
+        record WriteInProgress(long lastCommittedSeqNum) implements WriteResult {}
+        record SequenceMismatch(long lastCommittedSeqNum, long received) implements WriteResult {}
     }
 
     public void write(String chronicleId, long incomingSn, String tx, Consumer<WriteResult> callback) {
         final ReentrantLock lock = lockStripe(chronicleId);
         lock.lock();
         try {
+            final long currentSn = seqNums.getOrDefault(chronicleId, 0L);
+
             if (inFlightWrites.contains(chronicleId)) {
-                callback.accept(new WriteResult.WriteInProgress());
+                callback.accept(new WriteResult.WriteInProgress(currentSn));
                 return;
             }
 
-            final long currentSn = seqNums.getOrDefault(chronicleId, 0L);
-            final long expectedSn = currentSn + 1;
-            if (incomingSn != expectedSn) {
-                callback.accept(new WriteResult.SequenceMismatch(expectedSn, incomingSn));
+            if (incomingSn != currentSn + 1) {
+                callback.accept(new WriteResult.SequenceMismatch(currentSn, incomingSn));
                 return;
             }
 
             inFlightWrites.add(chronicleId);
-            final CompletableFuture<Void> sendFuture = logProducer.sendAsync(chronicleId, incomingSn, tx);
-
-            sendFuture.whenComplete((ignored, ex) -> {
+            logProducer.sendAsync(chronicleId, incomingSn, tx).whenComplete((ignored, ex) -> {
                 lock.lock();
                 try {
                     inFlightWrites.remove(chronicleId);
@@ -69,7 +65,9 @@ public class ChronicleLogWriter {
                 } finally {
                     lock.unlock();
                 }
-                callback.accept(ex == null ? new WriteResult.Success() : new WriteResult.SendFailure());
+                callback.accept(ex == null
+                        ? new WriteResult.Success(incomingSn)
+                        : new WriteResult.SendFailure(currentSn));
             });
         } finally {
             lock.unlock();

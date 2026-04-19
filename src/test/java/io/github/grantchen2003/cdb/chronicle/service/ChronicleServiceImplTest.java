@@ -3,7 +3,7 @@ package io.github.grantchen2003.cdb.chronicle.service;
 import io.github.grantchen2003.cdb.chronicle.producer.ChronicleLogProducerStub;
 import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxRequest;
 import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxResponse;
-import io.grpc.Status;
+import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +35,33 @@ class ChronicleServiceImplTest {
     @AfterEach
     void tearDown() {
         executor.shutdownNow();
+    }
+
+    private static class AppendTxResponseStub implements StreamObserver<AppendTxResponse> {
+        private final CountDownLatch latch;
+        private AppendTxResponse response;
+
+        AppendTxResponseStub(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
+        @Override
+        public void onNext(AppendTxResponse response) {
+            this.response = response;
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            latch.countDown();
+        }
+
+        @Override
+        public void onCompleted() {
+            latch.countDown();
+        }
+
+        public AppendTxResponse getResponse() { return response; }
+        public boolean isSuccess() { return response != null && response.getSuccess(); }
     }
 
     @Test
@@ -83,13 +110,25 @@ class ChronicleServiceImplTest {
                     .filter(s -> !s.isSuccess())
                     .toList();
 
-            Assertions.assertEquals(1, successStubs.size(), "Exactly one request should succeed for " + chronicleId);
+            Assertions.assertEquals(1, successStubs.size(),
+                    "Exactly one request should succeed for " + chronicleId);
             final AppendTxResponse success = successStubs.getFirst().getResponse();
-            Assertions.assertEquals(targetSn, success.getCommittedSeqNum(), "CommittedSeqNum should match targetSn");
+            Assertions.assertEquals(targetSn, success.getCommittedSeqNum(),
+                    "CommittedSeqNum should match targetSn");
+            Assertions.assertTrue(success.getErrorMessage().isEmpty(),
+                    "Successful response should have no error message");
 
             Assertions.assertEquals(numConcurrentRequests - 1, failureStubs.size());
             for (final AppendTxResponseStub failureStub : failureStubs) {
-                Assertions.assertEquals(Status.ABORTED.getCode(), failureStub.getError().getStatus().getCode());
+                final AppendTxResponse failure = failureStub.getResponse();
+                Assertions.assertFalse(failure.getSuccess());
+
+                if (failure.getCommittedSeqNum() == 0) {
+                    Assertions.assertEquals("Previous write still in-flight, retry", failure.getErrorMessage());
+                } else {
+                    Assertions.assertEquals(targetSn, failure.getCommittedSeqNum());
+                    Assertions.assertEquals("Sequence number mismatch; expected " + (targetSn + 1) + ", got " + targetSn, failure.getErrorMessage());
+                }
             }
         }
     }
@@ -116,17 +155,13 @@ class ChronicleServiceImplTest {
         final AppendTxResponseStub stub2 = new AppendTxResponseStub(finishGate);
 
         executor.submit(() -> {
-            try {
-                startGate.await();
-                service.appendTx(req1, stub1);
-            } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            try { startGate.await(); service.appendTx(req1, stub1); }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         });
 
         executor.submit(() -> {
-            try {
-                startGate.await();
-                service.appendTx(req2, stub2);
-            } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            try { startGate.await(); service.appendTx(req2, stub2); }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         });
 
         startGate.countDown();
@@ -136,10 +171,14 @@ class ChronicleServiceImplTest {
         }
 
         Assertions.assertTrue(stub1.isSuccess(), "chronicle1 should succeed independently of chronicle2");
-        Assertions.assertEquals(1L, stub1.getResponse().getCommittedSeqNum(), "CommittedSeqNum for chronicle1 should match the requested SN");
+        Assertions.assertEquals(1L, stub1.getResponse().getCommittedSeqNum(),
+                "CommittedSeqNum for chronicle1 should match the requested SN");
+        Assertions.assertTrue(stub1.getResponse().getErrorMessage().isEmpty());
 
         Assertions.assertTrue(stub2.isSuccess(), "chronicle2 should succeed independently of chronicle1");
-        Assertions.assertEquals(1L, stub2.getResponse().getCommittedSeqNum(), "CommittedSeqNum for chronicle2 should match the requested SN");
+        Assertions.assertEquals(1L, stub2.getResponse().getCommittedSeqNum(),
+                "CommittedSeqNum for chronicle2 should match the requested SN");
+        Assertions.assertTrue(stub2.getResponse().getErrorMessage().isEmpty());
     }
 
     @Test
@@ -158,7 +197,9 @@ class ChronicleServiceImplTest {
         service.appendTx(failReq, failStub);
 
         Assertions.assertFalse(failStub.isSuccess(), "Should fail when producer fails");
-        Assertions.assertEquals(Status.INTERNAL.getCode(), failStub.getError().getStatus().getCode());
+        Assertions.assertEquals(0L, failStub.getResponse().getCommittedSeqNum(),
+                "CommittedSeqNum should be 0 since nothing has been committed");
+        Assertions.assertEquals("Persistence failure", failStub.getResponse().getErrorMessage());
 
         logProducer.setShouldFail(false);
 
@@ -171,7 +212,9 @@ class ChronicleServiceImplTest {
         final AppendTxResponseStub successStub = new AppendTxResponseStub(new CountDownLatch(1));
         service.appendTx(successReq, successStub);
 
-        Assertions.assertTrue(successStub.isSuccess(), "Should succeed now that Kafka is up");
-        Assertions.assertEquals(1L, successStub.getResponse().getCommittedSeqNum(), "SN 1 should now be committed");
+        Assertions.assertTrue(successStub.isSuccess(), "Should succeed now that producer is up");
+        Assertions.assertEquals(1L, successStub.getResponse().getCommittedSeqNum(),
+                "SN 1 should now be committed");
+        Assertions.assertTrue(successStub.getResponse().getErrorMessage().isEmpty());
     }
 }

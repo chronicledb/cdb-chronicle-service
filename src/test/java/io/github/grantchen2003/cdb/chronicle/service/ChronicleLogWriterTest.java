@@ -58,7 +58,7 @@ class ChronicleLogWriterTest {
 
         assertInstanceOf(WriteResult.SequenceMismatch.class, result);
         final WriteResult.SequenceMismatch mismatch = (WriteResult.SequenceMismatch) result;
-        assertEquals(1L, mismatch.expected());
+        assertEquals(1L, mismatch.lastCommittedSeqNum() + 1);
         assertEquals(99L, mismatch.received());
     }
 
@@ -74,7 +74,7 @@ class ChronicleLogWriterTest {
         final WriteResult result = write("c1", 3, "tx3");
 
         assertInstanceOf(WriteResult.SequenceMismatch.class, result);
-        assertEquals(2L, ((WriteResult.SequenceMismatch) result).expected());
+        assertEquals(2L, ((WriteResult.SequenceMismatch) result).lastCommittedSeqNum() + 1);
     }
 
     // -----------------------------------------------------------------------

@@ -5,7 +5,6 @@ import io.github.grantchen2003.cdb.chronicle.service.ChronicleLogWriter.WriteRes
 import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxRequest;
 import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxResponse;
 import io.github.grantchen2003.cdb.chronicle.grpc.ChronicleServiceGrpc;
-import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 
 import java.util.Map;
@@ -24,27 +23,33 @@ public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceI
         final String tx = request.getTx();
 
         chronicleLogWriter.write(chronicleId, incomingSn, tx, result -> {
-            if (result instanceof WriteResult.WriteInProgress) {
-                responseObserver.onError(Status.ABORTED
-                        .withDescription("Previous write still in-flight, retry")
-                        .asRuntimeException());
+            final AppendTxResponse response = switch (result) {
+                case WriteResult.Success s -> AppendTxResponse.newBuilder()
+                        .setSuccess(true)
+                        .setCommittedSeqNum(s.lastCommittedSeqNum())
+                        .build();
 
-            } else if (result instanceof WriteResult.SequenceMismatch(long expected, long received)) {
-                responseObserver.onError(Status.ABORTED
-                        .withDescription("Sequence number mismatch; expected " + expected + ", got " + received)
-                        .asRuntimeException());
+                case WriteResult.WriteInProgress w -> AppendTxResponse.newBuilder()
+                        .setSuccess(false)
+                        .setCommittedSeqNum(w.lastCommittedSeqNum())
+                        .setErrorMessage("Previous write still in-flight, retry")
+                        .build();
 
-            } else if (result instanceof WriteResult.SendFailure) {
-                responseObserver.onError(Status.INTERNAL
-                        .withDescription("Persistence failure")
-                        .asRuntimeException());
+                case WriteResult.SequenceMismatch m -> AppendTxResponse.newBuilder()
+                        .setSuccess(false)
+                        .setCommittedSeqNum(m.lastCommittedSeqNum())
+                        .setErrorMessage("Sequence number mismatch; expected " + (m.lastCommittedSeqNum() + 1) + ", got " + m.received())
+                        .build();
 
-            } else if (result instanceof WriteResult.Success) {
-                responseObserver.onNext(AppendTxResponse.newBuilder()
-                        .setCommittedSeqNum(incomingSn)
-                        .build());
-                responseObserver.onCompleted();
-            }
+                case WriteResult.SendFailure f -> AppendTxResponse.newBuilder()
+                        .setSuccess(false)
+                        .setCommittedSeqNum(f.lastCommittedSeqNum())
+                        .setErrorMessage("Persistence failure")
+                        .build();
+            };
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
         });
     }
 }
