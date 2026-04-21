@@ -28,7 +28,8 @@ class ChronicleServiceImplTest {
     void setUp() {
         final Map<String, Long> chronicleIdToSn = new HashMap<>();
         logProducer = new ChronicleLogProducerStub();
-        service = new ChronicleServiceImpl(chronicleIdToSn, logProducer);
+        final ChronicleLogWriter chronicleLogWriter = new ChronicleLogWriter(logProducer, chronicleIdToSn);
+        service = new ChronicleServiceImpl(chronicleLogWriter);
         executor = Executors.newFixedThreadPool(NUM_EXECUTOR_THREADS);
     }
 

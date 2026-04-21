@@ -40,9 +40,4 @@ public class KafkaChronicleLogProducer implements ChronicleLogProducer {
 
         return result;
     }
-
-    @Override
-    public void close() {
-        producer.close(Duration.ofSeconds(30));
-    }
 }

@@ -227,8 +227,5 @@ class ChronicleLogWriterTest {
             }
             return CompletableFuture.completedFuture(null);
         }
-
-        @Override
-        public void close() {}
     }
 }

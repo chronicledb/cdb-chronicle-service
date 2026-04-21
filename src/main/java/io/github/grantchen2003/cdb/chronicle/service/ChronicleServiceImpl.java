@@ -1,19 +1,18 @@
 package io.github.grantchen2003.cdb.chronicle.service;
 
-import io.github.grantchen2003.cdb.chronicle.producer.ChronicleLogProducer;
 import io.github.grantchen2003.cdb.chronicle.service.ChronicleLogWriter.WriteResult;
 import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxRequest;
 import io.github.grantchen2003.cdb.chronicle.grpc.AppendTxResponse;
 import io.github.grantchen2003.cdb.chronicle.grpc.ChronicleServiceGrpc;
 import io.grpc.stub.StreamObserver;
+import net.devh.boot.grpc.server.service.GrpcService;
 
-import java.util.Map;
-
+@GrpcService
 public class ChronicleServiceImpl extends ChronicleServiceGrpc.ChronicleServiceImplBase {
     private final ChronicleLogWriter chronicleLogWriter;
 
-    public ChronicleServiceImpl(Map<String, Long> initialSeqNums, ChronicleLogProducer logProducer) {
-        this.chronicleLogWriter = new ChronicleLogWriter(logProducer, initialSeqNums);
+    public ChronicleServiceImpl(ChronicleLogWriter chronicleLogWriter) {
+        this.chronicleLogWriter = chronicleLogWriter;
     }
 
     @Override

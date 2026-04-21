@@ -17,7 +17,4 @@ public class ChronicleLogProducerStub implements ChronicleLogProducer {
         }
         return CompletableFuture.completedFuture(null);
     }
-
-    @Override
-    public void close() {}
 }
